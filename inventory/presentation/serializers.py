@@ -23,6 +23,9 @@ class EquipmentSerializer(serializers.ModelSerializer):
     user = serializers.SlugRelatedField(
         slug_field="username", queryset=User.objects.all()
     )
+    department = serializers.SlugRelatedField(
+        slug_field="name", queryset=Department.objects.all()
+    )
 
     class Meta:
         model = Equipment
