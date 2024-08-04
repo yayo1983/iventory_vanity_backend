@@ -3,13 +3,14 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
 from django.core.cache import cache
-from ..infrastructure.models import Department, Equipment, EquipmentLog, Inventory
+from ..infrastructure.models import Department, Equipment, EquipmentLog, Inventory, User
 from .serializers import (
     DepartmentSerializer,
     EquipmentSerializer,
     EquipmentLogSerializer,
     InventorySerializer,
-    ReassignEquipmentSerializer
+    ReassignEquipmentSerializer,
+    UserSerializer
 )
 from django.db import transaction
 
@@ -166,41 +167,43 @@ class EquipmentViewSet(viewsets.ModelViewSet):
             # Manejo de errores (si ocurre algún error, podrías registrar el error)
             print(f"Error al eliminar el objeto: {e}")
             # Puedes devolver un error apropiado si la eliminación falla
-            return Response({"detail": "Error al eliminar el objeto."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"detail": "Error al eliminar el objeto."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
         # Responder con éxito si la eliminación fue exitosa
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(detail=True, methods=['put'], url_path='deactivate')
+    @action(detail=True, methods=["put"], url_path="deactivate")
     def deactivate(self, request, pk=None):
         equipment = self.get_object()
         equipment.active = False
         equipment.save()
-        return Response({'status': 'Equipment deactivated'})
+        return Response({"status": "Equipment deactivated"})
 
-    @action(detail=True, methods=['put'], url_path='activate')
+    @action(detail=True, methods=["put"], url_path="activate")
     def activate(self, request, pk=None):
         equipment = self.get_object()
         equipment.active = True
         equipment.save()
-        return Response({'status': 'Equipment activated'})
+        return Response({"status": "Equipment activated"})
 
-    @action(detail=True, methods=['put'], url_path='reassign')
+    @action(detail=True, methods=["put"], url_path="reassign")
     def reassign(self, request, pk=None):
         equipment = self.get_object()
         serializer = ReassignEquipmentSerializer(data=request.data)
         if serializer.is_valid():
-            department = serializer.validated_data.get('department_id')
-            user = serializer.validated_data.get('user_id')
+            department = serializer.validated_data.get("department_id")
+            user = serializer.validated_data.get("user_id")
             if department:
                 equipment.department = department
             if user:
                 equipment.user = user
             equipment.save()
-            return Response({'status': 'Equipment reassigned'})
+            return Response({"status": "Equipment reassigned"})
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 
 class EquipmentLogViewSet(viewsets.ModelViewSet):
@@ -345,3 +348,8 @@ class InventoryViewSet(viewsets.ModelViewSet):
         cache.delete(cache_key)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer

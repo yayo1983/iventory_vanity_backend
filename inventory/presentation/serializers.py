@@ -20,7 +20,9 @@ class DepartmentSerializer(serializers.ModelSerializer):
 
 
 class EquipmentSerializer(serializers.ModelSerializer):
-    user = serializers.SlugRelatedField(slug_field='username', queryset=User.objects.all())
+    user = serializers.SlugRelatedField(
+        slug_field="username", queryset=User.objects.all()
+    )
 
     class Meta:
         model = Equipment
@@ -31,9 +33,18 @@ class EquipmentLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = EquipmentLog
         fields = "__all__"
-        
-        
-class ReassignEquipmentSerializer(serializers.Serializer):
-    department_id = serializers.PrimaryKeyRelatedField(queryset=Department.objects.all(), required=False)
-    user_id = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
 
+
+class ReassignEquipmentSerializer(serializers.Serializer):
+    department_id = serializers.PrimaryKeyRelatedField(
+        queryset=Department.objects.all(), required=False
+    )
+    user_id = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(), required=False
+    )
+
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["id", "username", "email", "first_name", "last_name"]
