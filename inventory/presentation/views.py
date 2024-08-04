@@ -136,7 +136,14 @@ class EquipmentViewSet(viewsets.ModelViewSet):
         """
         partial = kwargs.pop("partial", False)
         instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        
+        data = request.data.copy()
+        if "department_id" not in data:
+            data.pop("department_id", None)
+        if "user_id" not in data:
+            data.pop("user_id", None)
+            
+        serializer = self.get_serializer(instance, data=data, partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
 

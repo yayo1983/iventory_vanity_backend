@@ -21,10 +21,10 @@ class DepartmentSerializer(serializers.ModelSerializer):
 
 class EquipmentSerializer(serializers.ModelSerializer):
     user = serializers.SlugRelatedField(
-        slug_field="username", queryset=User.objects.all()
+        slug_field="username", queryset=User.objects.all(), required=False, allow_null=True
     )
     department = serializers.SlugRelatedField(
-        slug_field="name", queryset=Department.objects.all()
+        slug_field="name", queryset=Department.objects.all(), required=False, allow_null=True
     )
 
     class Meta:
