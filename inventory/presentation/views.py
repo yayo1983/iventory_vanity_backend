@@ -1,4 +1,5 @@
 from rest_framework import viewsets
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
 from django.core.cache import cache
@@ -8,7 +9,9 @@ from .serializers import (
     EquipmentSerializer,
     EquipmentLogSerializer,
     InventorySerializer,
+    ReassignEquipmentSerializer
 )
+from django.db import transaction
 
 
 class DepartmentViewSet(viewsets.ModelViewSet):
@@ -105,7 +108,9 @@ class EquipmentViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(queryset, many=True)
             equipment = serializer.data
             cache.set(cache_key, equipment, timeout=60 * 15)  # Cache timeout 15 minutes
-
+        queryset = Equipment.objects.all()
+        serializer = self.get_serializer(queryset, many=True)
+        equipment = serializer.data
         return Response(equipment)
 
     def retrieve(self, request, *args, **kwargs):
@@ -142,17 +147,60 @@ class EquipmentViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         """
-        Delete an equipment instance.
+        Delete an equipment instance and invalidate cache if the deletion is successful.
         """
+        # Obtener el objeto que se va a eliminar
         instance = self.get_object()
-        self.perform_destroy(instance)
 
-        # Invalidate cache for equipment list and specific equipment
-        cache.delete("equipment_list")
-        cache_key = f"equipment_{instance.pk}"
-        cache.delete(cache_key)
+        try:
+            # Ejecutar la eliminación en una transacción para asegurar que sea atómica
+            with transaction.atomic():
+                self.perform_destroy(instance)
+                # Si no ocurre ningún error, se borrará el caché
+                print("cache: antes de borrar", cache.get("equipment_list"))
+                cache.delete("equipment_list")
+                cache_key = f"equipment_{instance.pk}"
+                cache.delete(cache_key)
+                print("cache: después de borrar", cache.get("equipment_list"))
+        except Exception as e:
+            # Manejo de errores (si ocurre algún error, podrías registrar el error)
+            print(f"Error al eliminar el objeto: {e}")
+            # Puedes devolver un error apropiado si la eliminación falla
+            return Response({"detail": "Error al eliminar el objeto."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+        # Responder con éxito si la eliminación fue exitosa
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=['put'], url_path='deactivate')
+    def deactivate(self, request, pk=None):
+        equipment = self.get_object()
+        equipment.active = False
+        equipment.save()
+        return Response({'status': 'Equipment deactivated'})
+
+    @action(detail=True, methods=['put'], url_path='activate')
+    def activate(self, request, pk=None):
+        equipment = self.get_object()
+        equipment.active = True
+        equipment.save()
+        return Response({'status': 'Equipment activated'})
+
+    @action(detail=True, methods=['put'], url_path='reassign')
+    def reassign(self, request, pk=None):
+        equipment = self.get_object()
+        serializer = ReassignEquipmentSerializer(data=request.data)
+        if serializer.is_valid():
+            department = serializer.validated_data.get('department_id')
+            user = serializer.validated_data.get('user_id')
+            if department:
+                equipment.department = department
+            if user:
+                equipment.user = user
+            equipment.save()
+            return Response({'status': 'Equipment reassigned'})
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 class EquipmentLogViewSet(viewsets.ModelViewSet):

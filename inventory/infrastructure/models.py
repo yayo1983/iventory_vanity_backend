@@ -19,6 +19,7 @@ class Equipment(models.Model):
     installed_software = models.TextField(blank=True, null=True)
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)
+    active = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.brand} {self.model}"
